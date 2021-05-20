@@ -8,6 +8,10 @@ The default address is 0x60
 I2C has been tested with Arduino UNO, Nano and the ESP8266
 Examples of I2C commands can be found in [tinypwm.h](tinypwm.h)
 
+## TODOs
+
+Storing modified configuration in the EEPROM
+
 ## PWM Output Channel
 
 Pin 1 can be used to output a PWM signal with a given frequency from 488 to 65535Hz. For different frequencies timer1 can be programmed directly
