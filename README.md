@@ -6,7 +6,9 @@ IO Expander for ATTiny45/85 that offers one PWM output channel and up to 3 analo
 
 The default address is 0x60
 I2C has been tested with Arduino UNO, Nano and the ESP8266
-Examples of I2C commands can be found in [tinypwm.h](tinypwm.h)
+Examples of I2C commands can be found in [tinypwm.h](https://github.com/sascha432/TinyPwm/blob/main/include/tinypwm.h)
+
+
 
 ## TODOs
 
