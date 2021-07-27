@@ -1,77 +1,74 @@
-// /**
-//   Author: sascha_lammers@gmx.de
-// */
+/**
+  Author: sascha_lammers@gmx.de
+*/
 
-// #pragma once
+#pragma once
 
-// #include <Arduino.h>
-// #include <EEPROM.h>
-// #include <crc16.h>
-// #include "reg_mem.h"
+#include <Arduino.h>
+#include <crc16.h>
+#include "main.h"
 
-// namespace Config {
+namespace Config {
 
-//     static constexpr uint32_t kHeaderMagic = 0x8586c952;
+    static constexpr uint32_t kHeaderMagic = 0x8586c953;
 
-//     struct __attribute__((__packed__)) Config {
+    struct __attribute__((__packed__)) Header {
 
-//         uint32_t version;
-//         uint32_t magic;
-//         uint8_t cycles[TinyPwm::kAnalogPinCount];
-//         uint8_t pwmStartValue;
-//         int8_t adcOffset;
-//         int16_t adcGainError;
+        uint16_t crc;
+        uint32_t magic;
 
-//         Config() : version(0), magic(kHeaderMagic), cycles{}, pwmStartValue(0), adcOffset(0), adcGainError(0) {}
-//     };
+        Header() : crc(0), magic(0) {}
+    };
 
-//     class Data {
-//     public:
-//         Data() : _crc(~0), _config() {}
+    struct __attribute__((__packed__)) Arrays {
+        uint8_t cycles[TinyPwm::kPinCount];
+        uint8_t pinModes[TinyPwm::kPinCount];
+        uint8_t values[TinyPwm::kPinCount];
+    };
 
-//     private:
-//         struct __attribute__((__packed__)) {
-//             uint16_t _crc;
-//             Config _config;
-//         };
-//     };
+    struct __attribute__((__packed__)) Data {
 
-//     class Header {
-//     public:
-//         Header() : _magic(kHeaderMagic), _length(sizeof(Data))
-//         {
-//             _crc = crc();
-//         }
+        uint32_t version;
+        uint8_t address;
+        int8_t adcOffset;
+        int16_t adcGainError;
+        Arrays arrays;
 
-//         uint16_t crc() const {
-//             uint16_t crc =  crc16_update(&_magic, sizeof(_magic));
-//             crc =  crc16_update(crc, _length);
-//             return crc;
-//         }
+        Data() :
+            version(1),
+            address(TINYPWM_I2C_SLAVE_ADDRESS),
+            adcOffset(TINYPWM_ADC_OFFSET),
+            adcGainError(TINYPWM_GAIN_ERROR),
+            arrays({{ TINYPWM_ANALOG_CONVERSIONS }, { TINYPWM_PIN_MODES }, { TINYPWM_VALUES }})
+        {}
+    };
 
-//     private:
-//         struct __attribute__((__packed__)) {
-//             uint16_t _crc;
-//             uint32_t _magic;
-//             uint8_t _length;
-//         };
-//     };
+    static constexpr auto kHeaderSize = sizeof(Header);
+    static constexpr auto kDataSize = sizeof(Data);
 
-//     static constexpr auto kHeaderSize = sizeof(Header);
+    class __attribute__((__packed__)) Config {
+    public:
 
-//     class Base {
-//     public:
-//         Base() :
-//             _headers{0, EEPROM.length() / 3, EEPROM.length() * 2 / 3, EEPROM.length() - sizeof(Header)}
-//         {
-//         }
+        void clear();
 
-//         void format();
+        uint16_t crc() const {
+            return  crc16_update(&_data, sizeof(_data));
+        }
 
-//     protected:
-//         uint16_t getOffset() {}
+        bool read(uint16_t &position);
+        void write(uint16_t &position);
 
-//     protected:
-//         uint16_t _headers[4];
-//     };
-// }
+        const Data &data() const {
+            return _data;
+        }
+
+        Data &data() {
+            return _data;
+        }
+
+    private:
+        Header _header;
+        Data _data;
+    };
+
+}

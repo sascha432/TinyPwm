@@ -7,32 +7,36 @@
 #include <Wire.h>
 #include <time.h>
 #include "tinypwm.h"
-#include "main.h"
+#include "config.h"
 
 #if !defined(HAVE_ADC) || HAVE_ADC==0
 static_assert(TinyPwm::kAnalogPinCount == 0, "no ADC present");
 #endif
 
+
 struct RegMem {
     union {
         struct  {
-            TinyPwm::ResponseAnalogRead analog[TinyPwm::kAnalogPinCount];
-            uint8_t analogPinNo;
-            uint16_t analogValue;
+            uint8_t address;
             int8_t adcOffset;
             int16_t adcGainError;
-            uint8_t cycles[TinyPwm::kAnalogPinCount];
-            int8_t cycleCounter;
-            uint8_t pwmStartValue;
-            uint8_t pwmValue;
-            const uint8_t pwmPin;
+            TinyPwm::ResponseAnalogRead analog[TinyPwm::kPinCount];     // stores average value and number of readings
+            uint8_t analogPins[TinyPwm::kPinCount];
+            uint8_t analogPinCount;
+            uint8_t analogPinSelected;
+            uint8_t cycleCounter;
+            int16_t analogValue;
+            Config::Arrays arrays;
         };
         uint8_t raw[1];
     };
 
     static constexpr uint16_t kAdcDivider = 1024;
 
-    RegMem();
+    RegMem() {}
+    RegMem(const Config::Data &defaultConfig);
+
+    void updateConfig(Config::Data &config);
 
     // setup
     void begin();
@@ -55,11 +59,12 @@ struct RegMem {
     void setAnalogReference(TinyPwm::AnalogReference _analogReference);
 
     // number of ADC cycles before switching to the next input channel
-    void setAnalogCycles(uint8_t pinNo, uint8_t cycles);
+    // pin is the internal pin number, not the digital pin or input channel
+    void setAnalogCycles(uint8_t pin, uint8_t cycles);
 
     // select analog pin to read and start conversion
-    // pinNo is the internal pin number, not the digital pin or input channel
-    void selectAnalogPin(uint8_t pinNo);
+    // pin is the internal pin number, not the digital pin or input channel
+    void selectAnalogPin(uint8_t pin);
 
     // select next analog pin to read and start conversion
     void selectNextAnalogPin();
@@ -68,7 +73,24 @@ struct RegMem {
     void readAnalogValue();
 
     // analogWrite with mapped value from 0 - 255
+    // pin is the internal pin number, not the digital pin or input channel
+    // mode OUTPUT
     void analogWrite(uint8_t pin, uint8_t value);
+
+    // digitalWrite
+    // mode OUTPUT
+    void digitalWrite(uint8_t pin, bool state);
+
+    // digitalRead
+    bool digitalRead(uint8_t pin);
+
+    // set pin mode
+    // pin is the internal pin number, not the digital pin or input channel
+    // mode INPUT, INPUT_PULLUP, OUTPUT, ANALOG_INPUT
+    void pinMode(uint8_t pin, uint8_t mode);
+
+private:
+    void _resetAnalogPins();
 };
 
 static constexpr size_t kRegMemSize = sizeof(RegMem);
@@ -90,10 +112,14 @@ inline void RegMem::setAnalogReference(TinyPwm::AnalogReference analogReference)
     ::analogReference(static_cast<uint8_t>(analogReference));
 }
 
-inline void RegMem::setAnalogCycles(uint8_t pinNo, uint8_t _cycles)
+inline void RegMem::setAnalogCycles(uint8_t pin, uint8_t _cycles)
 {
-    cycles[pinNo] = max(1, min(63, _cycles));
-    if (pinNo == analogPinNo) { // restart current measurement
+    if (pin >= TinyPwm::kPinCount) {
+        DBG2_PRINTF("setAnalogCycles pin #%u not valid", pin);
+        return;
+    }
+    arrays.cycles[pin] = max(1, min(63, _cycles));
+    if (analogPins[analogPinSelected] == pin) { // restart current measurement
         cycleCounter = 0;
     }
     DBG3_PRINTF("pin=%u analog_cycles=%u", (unsigned)pinNo, (unsigned)cycles[pinNo]);

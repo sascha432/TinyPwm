@@ -37,11 +37,11 @@ scan i2c bus for devices
 
 +i2cscan
 
-set pwm on PB1
+set pwm on pin 0 (PB1)
 
-+i2ctm=0x60,0x10,0x40
-+i2ctm=0x60,0x10,0x20
-+i2ctm=0x60,0x10,0x00
++i2ctm=0x60,0x10,0x00,0x40
++i2ctm=0x60,0x10,0x00,0x20
++i2ctm=0x60,0x10,0x00,0x00
 
 set analog reference 2.56V
 
@@ -51,13 +51,13 @@ set analog reference 1.1V
 
 +i2ctm=0x60,0x62,0x02
 
-read analog pin 0
-
-+i2ctm=0x60,0x11,0x00;+i2crq=0x60,0x02
-
-read analog pin 1
+analog read pin 1 (PB3)
 
 +i2ctm=0x60,0x11,0x01;+i2crq=0x60,0x02
+
+analog read pin 2 (PB4)
+
++i2ctm=0x60,0x11,0x02;+i2crq=0x60,0x02
 
 set timer prescaler to 1, clock prescaler to 1 and normal mode (488Hz PWM)
 
@@ -79,34 +79,25 @@ read sfr TCCR0A
 
 request info
 
-+i2ctm=0x60,0xf0;+i2crq=0x60,0x0f
-
-
-
-+i2ctm=0x60,0x51,0xa8,0x61;+i2ctm=0x60,0xf0;+i2crq=0x60,0x0f
-
-+i2ctm=0x60,0x50,0x01,0x03,0;+i2ctm=0x60,0xf0;+i2crq=0x60,0x0f
-
-+i2ctm=0x60,0x51,0x20,0x4e;+i2ctm=0x60,0xf0;+i2crq=0x60,0x0f
-
-+i2ctm=0x60,0x51,0x88,0x13;+i2ctm=0x60,0xf0;+i2crq=0x60,0x0f
++i2ctm=0x60,0xf0;+i2crq=0x60,0x08
 
 */
 
- namespace TinyPwm {
+#include "main.h"
 
-    static constexpr const uint8_t kAnalogPins[] = { DEFAULT_ANALOG_PINS };
-    static constexpr const uint8_t kAnalogPinCount = sizeof(kAnalogPins);
+namespace TinyPwm {
 
-    struct AnalogPins {
-        constexpr AnalogPins() : pins{DEFAULT_ANALOG_PINS} {}
-
+    struct Pins {
         constexpr uint8_t size() const {
-            return kAnalogPinCount;
+            return sizeof(*this);
         }
-
-        const uint8_t pins[kAnalogPinCount];
+        uint8_t pins[kPinCount];
+        int operator[](int index) const {
+            return pins[index];
+        }
     };
+
+    static constexpr Pins kPins = { TINYPWM_PINS };
 
     struct __attribute__((__packed__)) Version {
         uint16_t major: 4;
@@ -120,17 +111,24 @@ request info
         }
     };
 
-    static constexpr auto kVersion = Version(0, 0, 2);
+    static constexpr auto kVersion = Version(TINYPWM_VERSION_MAJOR, TINYPWM_VERSION_MINOR, TINYPWM_VERSION_REVISION);
+
+    struct __attribute__((__packed__)) SerialDebug {
+        uint8_t txPin: 4;
+        uint8_t rxPin: 4;
+    };
+
+#if DEBUG
+    static constexpr SerialDebug kSerialDebug = { DEBUG_SERIAL_TX_PIN, DEBUG_SERIAL_RX_PIN };
+#else
+    static constexpr SerialDebug kSerialDebug = { 0xf, 0xf };
+#endif
 
     struct __attribute__((__packed__)) Info {
         Version version;
-        uint8_t pwmPin;
         uint16_t pwmFrequency;
-        AnalogPins analogPins;
-        struct __attribute__((__packed__)) {
-            uint8_t txPin: 4;
-            uint8_t rxPin: 4;
-        } serialDebug;
+        Pins pins;
+        SerialDebug serialDebug;
 
         Info();
     };
@@ -139,10 +137,13 @@ request info
 
     enum class Commands : uint8_t {
         INVALID = 0,
-        ANALOG_WRITE = 0x10,
         ANALOG_READ = 0x11,
-        READ_EEPROM = 0x20,
-        WRITE_EEPROM = 0x41,
+        ANALOG_WRITE = 0x12,
+        DIGITAL_READ = 0x13,
+        DIGITAL_WRITE = 0x14,
+        PIN_MODE = 0x15,
+        WRITE_EEPROM = 0x41,        // stores current settings in EEPROM
+        RESET_EEPROM = 0x42,        // restores firmware defaults
         SET_PWM_PARAMS = 0x50,
         SET_PWM_FREQUENCY = 0x51,
         // ADC_SET_GAIN =  0x61,
@@ -150,12 +151,14 @@ request info
         ADC_SET_READ_CYCLES = 0x63,
         READ_SFR = 0x80,
         WRITE_SFR = 0x81,
-        MASK_SFR = 0x82,        // SFR = (SFR & mask) | data
-        OR_SFR = 0x83,
-        AND_SFR = 0x84,
+        MASK_SFR = 0x82,            // SFR = (SFR & mask) | data
+        OR_SFR = 0x83,              // SFR |= data
+        AND_SFR = 0x84,             // SFR &= data
+        XOR_SFR = 0x85,             // SFR ^= data
         CLI = 0x90,
         SEI = 0x91,
-        INFO = 0xf0
+        INFO = 0xf0,
+        END = 0xff
     };
 
     enum class AnalogReference : uint8_t {
@@ -274,11 +277,23 @@ request info
                         uint16_t frequency;
                     } SET_PWM_FREQUENCY;
                     struct {
+                        uint8_t pin;            // internal pin number
                         uint8_t pwmValue;
                     } ANALOG_WRITE;
                     struct {
-                        uint8_t pinNo;
+                        uint8_t pin;            // internal pin number
                     } ANALOG_READ;
+                    struct {
+                        uint8_t pin;            // internal pin number
+                    } DIGITAL_READ;
+                    struct {
+                        uint8_t pin;            // internal pin number
+                        uint8_t value;
+                    } DIGITAL_WRITE;
+                    struct {
+                        uint8_t pin;            // internal pin number
+                        uint8_t mode;
+                    } PIN_MODE;
                     struct {
                         uint8_t address;
                         uint8_t data;
@@ -300,6 +315,10 @@ request info
                         uint8_t data;
                     } AND_SFR;
                     struct {
+                        uint8_t address;
+                        uint8_t data;
+                    } XOR_SFR;
+                    struct {
                         AnalogReference mode;
                     } ADC_SET_AREF;
                     struct {
@@ -308,7 +327,11 @@ request info
                     } ADC_SET_READ_CYCLES;
                 };
             };
-            uint8_t raw[1];
+            uint8_t raw[32];
+            struct {
+                uint8_t __length;
+                uint8_t rawCommand[31];
+            };
         };
     };
 

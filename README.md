@@ -8,15 +8,17 @@ The default address is 0x60
 I2C has been tested with Arduino UNO, Nano and the ESP8266
 Examples of I2C commands can be found in [tinypwm.h](https://github.com/sascha432/TinyPwm/blob/main/include/tinypwm.h)
 
+## Default PINs
 
+PB0 / pin 5 = SDA
+PB2 / pin 7 = SCL
+PB1 / pin 6 = PWM output
+PB3 / pin 2 = ADC #1
+PB4 / pin 3 = ADC #2
 
-## TODOs
+## PWM Output
 
-Storing modified configuration in the EEPROM
-
-## PWM Output Channel
-
-Pin 1 can be used to output a PWM signal with a given frequency from 488 to 65535Hz. For different frequencies timer1 can be programmed directly
+PB1 can be used to output a PWM signal with a given frequency from 488 to 65535Hz. For different frequencies timer1 can be programmed directly
 
 ### PWM frequency
 
@@ -32,19 +34,20 @@ The duty cycle is set with the `ANALOG_WRITE` command and the data is the PWM va
 
 Example for 50% duty cycle
 
-`0x60 0x10(ANALOG_WRITE) 0x7f(127)`
+`0x60 0x10(ANALOG_WRITE) 0x00(PB1) 0x7f(127)`
 
 The max. duty cycle is 255, but not all frequencies support the full range. For these cases the values are mapped
 
 ## ADC Input Channels
 
-Pin 3, 4 and 5 can be used as ADC input channels. If Pin5 is used, the reset pin must be disabled by programming the Fuse High Byte (see Table 20-4, [https://ww1.microchip.com/downloads/en/DeviceDoc/Atmel-2586-AVR-8-bit-Microcontroller-ATtiny25-ATtiny45-ATtiny85_Datasheet.pdf](https://ww1.microchip.com/downloads/en/DeviceDoc/Atmel-2586-AVR-8-bit-Microcontroller-ATtiny25-ATtiny45-ATtiny85_Datasheet.pdf))
+PB1, PB3, PB4 and PB5 can be used as ADC input channels. If Pin5 is used, the reset pin must be disabled by programming the Fuse High Byte (see Table 20-4, [https://ww1.microchip.com/downloads/en/DeviceDoc/Atmel-2586-AVR-8-bit-Microcontroller-ATtiny25-ATtiny45-ATtiny85_Datasheet.pdf](https://ww1.microchip.com/downloads/en/DeviceDoc/Atmel-2586-AVR-8-bit-Microcontroller-ATtiny25-ATtiny45-ATtiny85_Datasheet.pdf))
 
 ### Reading Analog Channels
 
 The selected channels are constantly read and the values or averages value stored. Requesting a reading does not block and returns the last stored value. By default, the internal 2.56V reference is set
 
-`0x60 0x11(ANALOG_READ) 0x00(pin number)`
+`0x60 0x11(ANALOG_READ) 0x01(PB3)`
+`0x60 0x11(ANALOG_READ) 0x02(PB4)`
 
 The response is an uint16 with the value.
 
@@ -56,6 +59,13 @@ Set voltage reference to 1.1V
 
 
 # Changelog
+
+## 0.0.3
+
+ - Multiple output or input pins
+ - Pins can be configured with pinMode
+ - Write current settings as default configuration to EEPROM
+ - digitalRead/Write added
 
 ## 0.0.2
 

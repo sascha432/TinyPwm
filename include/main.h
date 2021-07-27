@@ -34,54 +34,75 @@
 #define DBG3_PRINTF(...)
 #endif
 
+#define TINYPWM_VERSION_MAJOR 0
+#define TINYPWM_VERSION_MINOR 0
+#define TINYPWM_VERSION_REVISION 3
+
 // default I2C slave address
-#ifndef DEFAULT_I2C_SLAVE_ADDRESS
-#define DEFAULT_I2C_SLAVE_ADDRESS 0x60
+#ifndef TINYPWM_I2C_SLAVE_ADDRESS
+#define TINYPWM_I2C_SLAVE_ADDRESS 0x60
 #endif
 
-// #ifndef DEFAULT_TIMER_PRESCALER
-// #define DEFAULT_TIMER_PRESCALER TinyPwm::TimerPrescaler::FCLK_64
-// #endif
-
-#if DEFAULT_PWM_FREQUENCY
-#define DEFAULT_CLOCK_PRESCALER TinyPwm::kGetPwmFrequency<DEFAULT_PWM_FREQUENCY>().prescaler
-#define DEFAULT_OVERFLOW TinyPwm::kGetPwmFrequency<DEFAULT_PWM_FREQUENCY>().overflow
+#if TINYPWM_VALUES_FREQUENCY
+#define TINYPWM_CLOCK_PRESCALER TinyPwm::kGetPwmFrequency<TINYPWM_VALUES_FREQUENCY>().prescaler
+#define TINYPWM_OVERFLOW TinyPwm::kGetPwmFrequency<TINYPWM_VALUES_FREQUENCY>().overflow
 #endif
 
 // clock prescaler for PWM
-#ifndef DEFAULT_CLOCK_PRESCALER
-#define DEFAULT_CLOCK_PRESCALER TinyPwm::ClockPrescaler::PCK_64
+#ifndef TINYPWM_CLOCK_PRESCALER
+#define TINYPWM_CLOCK_PRESCALER TinyPwm::ClockPrescaler::PCK_64
 #endif
 
-// decreasing overflow reduces the resolution the he PWM (1 / DEFAULT_OVERFLOW)
+// decreasing overflow reduces the resolution of the PWM (1 / TINYPWM_OVERFLOW)
 // default 0 = (1 step / 255) = 0.392157%
-#ifndef DEFAULT_OVERFLOW
-#define DEFAULT_OVERFLOW 0
-#endif
-
-// default value for PWM
-#ifndef DEFAULT_PWM
-#define DEFAULT_PWM 0
+#ifndef TINYPWM_OVERFLOW
+#define TINYPWM_OVERFLOW 0
 #endif
 
 // analog reference for the ADC
-#ifndef DEFAULT_ANALOG_REFERENCE
-#define DEFAULT_ANALOG_REFERENCE TinyPwm::AnalogReference::INTERNAL_2V56
+#ifndef TINYPWM_ANALOG_REFERENCE
+#define TINYPWM_ANALOG_REFERENCE TinyPwm::AnalogReference::INTERNAL_2V56
 #endif
 
-// list of analog inputs to constantly read the ADC values from
-#ifndef DEFAULT_ANALOG_PINS
-#define DEFAULT_ANALOG_PINS A3,A2
+// list of digital pins
+#ifndef TINYPWM_PINS
+#define TINYPWM_PINS PB1, PB2, PB3
+#endif
+
+#define ANALOG_INPUT 0x80
+
+// set modes at startup
+#ifndef TINYPWM_PIN_MODES
+#define TINYPWM_PIN_MODES INPUT, ANALOG_INPUT, ANALOG_INPUT
+#endif
+
+// default values for PWM
+// the pin mode must be set to output (TINYPWM_PIN_MODES)
+#ifndef TINYPWM_VALUES
+#define TINYPWM_VALUES 0, 0, 0
 #endif
 
 // get an average over N conversions before storing the final value
 // each analog pin can have its own cycle count
 // possible values are 1-63
-#ifndef DEFAULT_ANALOG_CONVERSIONS
-#define DEFAULT_ANALOG_CONVERSIONS 1,1
+#ifndef TINYPWM_ANALOG_CONVERSIONS
+#define TINYPWM_ANALOG_CONVERSIONS 1, 1, 1
 #endif
 
-static constexpr const uint8_t kAnalogPins[] = { DEFAULT_ANALOG_PINS };
+#ifndef TINYPWM_ADC_OFFSET
+#define TINYPWM_ADC_OFFSET 0
+#endif
+
+#ifndef TINYPWM_GAIN_ERROR
+#define TINYPWM_GAIN_ERROR 0
+#endif
 
 #define _STRINGIFY(...) ___STRINGIFY(__VA_ARGS__)
 #define ___STRINGIFY(...) #__VA_ARGS__
+
+namespace TinyPwm {
+
+    static constexpr const uint8_t _kPins[] = { TINYPWM_PINS };
+    static constexpr const uint8_t kPinCount = sizeof(_kPins);
+
+}
