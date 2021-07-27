@@ -162,8 +162,8 @@ namespace TinyPwm {
     };
 
     enum class AnalogReference : uint8_t {
-        INTERNAL_1V1 = INTERNAL1V1,
-        INTERNAL_2V56 = INTERNAL2V56_NO_CAP,
+        INTERNAL_1V1 = INTERNAL1V1, // 2
+        INTERNAL_2V56 = INTERNAL2V56_NO_CAP, // 6
     };
 
     enum class TimerPrescaler : uint8_t {
@@ -322,7 +322,7 @@ namespace TinyPwm {
                         AnalogReference mode;
                     } ADC_SET_AREF;
                     struct {
-                        uint8_t pinNo;
+                        uint8_t pin;
                         uint8_t cycles;
                     } ADC_SET_READ_CYCLES;
                 };

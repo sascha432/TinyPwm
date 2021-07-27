@@ -155,7 +155,7 @@ void receiveEvent(int count)
                 break;
             case TinyPwm::Commands::ADC_SET_READ_CYCLES:
                 if (CMD_CHECK_LENGTH(ADC_SET_READ_CYCLES)) {
-                    regMem.setAnalogCycles(cmd.ADC_SET_READ_CYCLES.pinNo, cmd.ADC_SET_READ_CYCLES.cycles);
+                    regMem.setAnalogCycles(cmd.ADC_SET_READ_CYCLES.pin, cmd.ADC_SET_READ_CYCLES.cycles);
                     removeCommand(cmd, sizeof(cmd.ADC_SET_READ_CYCLES));
                 }
                 break;
