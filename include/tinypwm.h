@@ -69,7 +69,7 @@ analogWrite range is always mapped to 0-255
 
 +i2ctm=0x60,0x50,0x01,0x01,0x7f
 
-set pwm frequeny to 25kHz
+set pwm frequency to 25kHz
 
 +i2ctm=0x60,0x51,0xa8,0x61
 
@@ -160,6 +160,10 @@ namespace TinyPwm {
         INFO = 0xf0,
         END = 0xff
     };
+
+    #ifndef INTERNAL2V56_NO_CAP
+    #   define INTERNAL2V56_NO_CAP INTERNAL2V56
+    #endif
 
     enum class AnalogReference : uint8_t {
         INTERNAL_1V1 = INTERNAL1V1, // 2

@@ -3,5 +3,14 @@
 		{
 			"path": "."
 		}
-	]
+	],
+	"settings": {
+		"cSpell.words": [
+			"AREF",
+			"cscan",
+			"EEPROM",
+			"FCLK",
+			"TCCR0A"
+		]
+	}
 }
